@@ -1,6 +1,6 @@
 # Báo Cáo Thực Hành & Thuyết Minh Kỹ Thuật — Lab 19: GraphRAG vs Flat RAG
 
-**Học viên:** [Họ và Tên — điền tên bạn]
+**Học viên:** Nguyễn Đức Sơn — MSSV: 2A202601485
 **Khóa học:** AICB-K34 · Track 3: GraphRAG
 **Ngày thực hiện:** 19/08/2026
 
@@ -115,19 +115,19 @@
 ---
 
 ### 3. Kế hoạch Áp dụng vào Đồ án Thực tế (Action Plan)
-- **Tên đồ án / Dự án:** [Điền tên đồ án của bạn]
-- **Đặc thù bài toán & Lý do chọn giải pháp:** [Đánh giá: đồ án của bạn có câu hỏi dạng multi-hop/cross-doc thực sự không, hay phần lớn là factoid đơn giản — nếu factoid chiếm đa số, Flat/Hybrid RAG có thể đủ dùng và rẻ hơn GraphRAG]
+- **Tên đồ án / Dự án:** Trợ lý tra cứu tri thức nội bộ doanh nghiệp (Enterprise Knowledge Assistant) — hệ thống hỏi-đáp trên tài liệu, tin tức và hồ sơ quan hệ đối tác/khách hàng của công ty.
+- **Đặc thù bài toán & Lý do chọn giải pháp:** Phần lớn câu hỏi thực tế của người dùng nội bộ là factoid đơn giản ("Hợp đồng X ký ngày nào?", "Ai phụ trách dự án Y?") — với nhóm này Flat RAG là đủ và rẻ hơn nhiều. Tuy nhiên có một tỷ lệ đáng kể câu hỏi dạng multi-hop/cross-doc thực sự cần thiết (ví dụ: "Đối tác nào từng làm việc với cả phòng A và phòng B, và hợp đồng đó còn hiệu lực không?") — những câu này Flat RAG dễ bỏ sót vì thông tin nằm rải rác ở nhiều tài liệu không tương đồng về mặt ngữ nghĩa bề mặt. Vì vậy lựa chọn kiến trúc **Hybrid RAG** (Flat + GraphRAG) giống mô hình trong lab, không dùng GraphRAG thuần vì chi phí vận hành/latency cao hơn không đáng cho phần lớn truy vấn đơn giản.
 - **Cấu trúc Node & Relation dự kiến:**
-  - Nodes: `...`
-  - Relations: `...`
-- **Chiến lược xử lý Super-node & Entity Resolution:** [Dựa trên bài học từ lab: đặt ngưỡng cosine ~0.90 + lexical guard ~0.70-0.75 để tránh false merge; theo dõi degree distribution sớm để biết khi nào cần kích hoạt super-node cap]
+  - Nodes: `Person` (nhân viên/đối tác), `Organization` (phòng ban/công ty đối tác), `Project`, `Document` (hợp đồng/báo cáo)
+  - Relations: `WORKS_ON`, `MANAGES`, `PARTNERED_WITH`, `SIGNED`, `REFERENCES` — kèm provenance bắt buộc `source_document_id`, `date`, `evidence` giống pattern đã học trong lab.
+- **Chiến lược xử lý Super-node & Entity Resolution:** Áp dụng đúng bài học từ lab: ngưỡng cosine ~0.90 cho vector match + lexical/rule guard riêng cho tên người/tổ chức tiếng Việt (xử lý dấu, viết tắt phòng ban) để tránh false merge; theo dõi degree distribution ngay từ đầu (các phòng ban lớn hoặc đối tác chiến lược dễ thành super-node thật) để bật cap 50 cạnh mới nhất kịp thời, tránh tình huống như trong lab là dữ liệu quá thưa nên cơ chế này chưa từng được kiểm chứng bằng dữ liệu thật.
 
 ---
 
 ## 🎯 TỰ ĐÁNH GIÁ
 | Tiêu chí | Điểm tự chấm (1–5) | Ghi chú |
 |----------|-------------------|---------|
-| Mức độ hiểu bài giảng GraphRAG | | |
-| Khả năng kiểm soát AI Coding Agent | | |
-| Chất lượng đồ thị tri thức xây dựng | | |
-| Khả năng phân tích và debug hệ thống | | |
+| Mức độ hiểu bài giảng GraphRAG | 4 | Hiểu rõ luồng end-to-end (coreference → extraction → entity resolution → bulk insert → hybrid retrieval → eval), giải thích được từng lựa chọn threshold/policy. |
+| Khả năng kiểm soát AI Coding Agent | 4 | Không nhận toàn bộ output của Agent làm đúng — tự phát hiện và sửa nhiều bug hạ tầng (model deprecated, SSL, column mapping, JSON malformed), quyết định phạm vi dữ liệu phù hợp thời gian thực tế. |
+| Chất lượng đồ thị tri thức xây dựng | 3 | Graph chạy đúng schema/provenance (0 lỗi), nhưng quy mô còn nhỏ (132 triples/108 edges) do giới hạn thời gian và quota API — chưa đủ dày để thấy rõ ưu thế GraphRAG hay kích hoạt Super-node Mitigation bằng dữ liệu thật. |
+| Khả năng phân tích và debug hệ thống | 4 | Truy vết được nhiều lớp lỗi khác nhau (model 404, rate limit theo từng model riêng biệt, SSL do antivirus, JSON schema không nhất quán giữa các model) và có chiến lược retry/checkpoint để không mất tiến độ khi bị gián đoạn giữa chừng. |
